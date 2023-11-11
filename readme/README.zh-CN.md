@@ -379,4 +379,4 @@ python Shamir.py -e avatar.png -n 5 -r 3 -d avatar_recover.png -i 1 4 5 -c avata
 
 该项目在GNU通用公共许可证v3.0下获得许可
 
-详情请见[LICENSE](LICENSE)文件。
+详情请见[LICENSE](../LICENSE)文件。
