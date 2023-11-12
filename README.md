@@ -2,7 +2,7 @@
 
 This repository implements a secret sharing algorithm for images based on Shamir's Secret Sharing scheme, which enables the encryption and decryption of images into multiple shares, ensuring the original image can be losslessly reconstructed from a subset of the shares.
 
-[简体中文](readme/README.zh-CN.md) | English
+[简体中文](readme/README.zh-CN.md) | [繁體中文](readme/README.zh-TW.md) | English
 
 ## Features
 

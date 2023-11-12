@@ -2,7 +2,7 @@
 
 本项目实现了基于Shamir秘密共享方案的图像秘密共享算法，用于将图像加密和解密为多个份额，并确保原始图像可以从一部分份额中无损地重构。
 
-[English](README.md) | 简体中文
+[English](README.md) | [繁體中文](README.zh-TW.md) | 简体中文
 
 ## 功能特性
 
@@ -379,4 +379,4 @@ python Shamir.py -e avatar.png -n 5 -r 3 -d avatar_recover.png -i 1 4 5 -c avata
 
 该项目在GNU通用公共许可证v3.0下获得许可
 
-详情请见[LICENSE](LICENSE)文件。
+详情请见[LICENSE](../LICENSE)文件。
