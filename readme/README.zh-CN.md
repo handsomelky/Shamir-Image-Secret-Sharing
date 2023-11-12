@@ -59,7 +59,7 @@ python Shamir.py -h
 以下是如何编码和解码图像的示例：
 
 ```shell
-shellCopy code# 将图像编码为5个份额，阈值为3
+# 将图像编码为5个份额，阈值为3
 python Shamir.py -e avatar.png -n 5 -r 3
 
 # 使用份额1、4和5解码图像
@@ -379,8 +379,5 @@ python Shamir.py -e avatar.png -n 5 -r 3 -d avatar_recover.png -i 1 4 5 -c avata
 
 该项目在GNU通用公共许可证v3.0下获得许可
 
-<<<<<<< HEAD
 详情请见[LICENSE](../LICENSE)文件。
-=======
-详情请见[LICENSE](../LICENSE)文件。
->>>>>>> ae90fcaadb74541dad931002e0c525b1fdaac0d1
+

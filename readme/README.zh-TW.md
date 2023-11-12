@@ -59,7 +59,7 @@ python Shamir.py -h
 以下是如何編碼和解碼圖像的示例：
 
 ```shell
-shellCopy code# 將圖像編碼為5個份額，閾值為3
+# 將圖像編碼為5個份額，閾值為3
 python Shamir.py -e avatar.png -n 5 -r 3
 
 # 使用份額1、4和5解碼圖像
