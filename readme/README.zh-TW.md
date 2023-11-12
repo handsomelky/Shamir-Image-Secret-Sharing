@@ -2,7 +2,7 @@
 
 本項目實現了基於Shamir秘密共享方案的圖像秘密共享算法，用於將圖像加密和解密為多個份額，並確保原始圖像可以從一部分份額中無損地重構。
 
-[English](README.md) | [简体中文](README.zh-CN.md) | 繁體中文
+[English](../README.md) | [简体中文](README.zh-CN.md) | 繁體中文
 
 ## 功能特性
 
