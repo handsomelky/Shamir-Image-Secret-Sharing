@@ -326,14 +326,13 @@ By removing the content related to the extra section from the source code, we re
 The image below shows the algorithm's results and the restored image **after removing the extra information module**:
 
 ![Algorithm Results without Extra Information Module](https://r1ck-blog.oss-cn-shenzhen.aliyuncs.com/image-20231111213949707-169972058927693.png)
-
-![Restored Image without Extra Information Module](https://r1ck-blog.oss-cn-shenzhen.aliyuncs.com/avatar_recover-16997100367043-169972058927794.png)
+![Restored Image with Extra Information Module](https://r1ck-blog.oss-cn-shenzhen.aliyuncs.com/avatar_recover-169972058927796.png)
 
 The next image shows the algorithm's results and the restored image **with the extra information module**:
 
 ![Algorithm Results with Extra Information Module](https://r1ck-blog.oss-cn-shenzhen.aliyuncs.com/image-20231111213701330-169972058927795.png)
 
-![Restored Image with Extra Information Module](https://r1ck-blog.oss-cn-shenzhen.aliyuncs.com/avatar_recover-169972058927796.png)
+![Restored Image without Extra Information Module](https://r1ck-blog.oss-cn-shenzhen.aliyuncs.com/avatar_recover-16997100367043-169972058927794.png)
 
 Firstly, regarding losslessness, the algorithm without the extra information module has an average pixel value difference of 0.9862 due to the effect of remainder 256 pixels. In contrast, the algorithm with the extra information module restores the image perfectly, with an average pixel value difference of 0.
 
