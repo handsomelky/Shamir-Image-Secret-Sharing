@@ -328,14 +328,12 @@ python Shamir.py -e avatar.png -n 5 -r 3 -d avatar_recover.png -i 1 4 5 -c avata
 下图是**去掉额外信息模块**后的算法运行结果和恢复的图像
 
 ![image-20231111213949707](https://r1ck-blog.oss-cn-shenzhen.aliyuncs.com/image-20231111213949707.png)
-
-<img src="https://r1ck-blog.oss-cn-shenzhen.aliyuncs.com/avatar_recover-16997100367043.png" alt="avatar_recover" style="zoom:50%;" />
+<img src="https://r1ck-blog.oss-cn-shenzhen.aliyuncs.com/avatar_recover.png" alt="avatar_recover" style="zoom:50%;" />
 
 下图是**拥有额外信息模块**的算法运行结果和恢复的图像
 
 ![image-20231111213701330](https://r1ck-blog.oss-cn-shenzhen.aliyuncs.com/image-20231111213701330.png)
-
-<img src="https://r1ck-blog.oss-cn-shenzhen.aliyuncs.com/avatar_recover.png" alt="avatar_recover" style="zoom:50%;" />
+<img src="https://r1ck-blog.oss-cn-shenzhen.aliyuncs.com/avatar_recover-16997100367043.png" alt="avatar_recover" style="zoom:50%;" />
 
 首先是无损方面，没有额外信息模块的算法因为余256像素点的影响，平均像素值差异为0.9862
 
