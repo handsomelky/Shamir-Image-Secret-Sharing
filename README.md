@@ -12,6 +12,7 @@ This project implements lossless image secret sharing based on Shamir's Secret S
 - Optional zlib payload compression when it reduces the shared data size.
 - Cryptographically secure random polynomial coefficients.
 - Vectorized NumPy reconstruction for better decoding performance.
+- Rich-powered CLI status panels, progress bars, result tables, and error messages.
 - Configurable share output directory, share input directory, and share filename prefix.
 - Built-in image comparison command and unit tests.
 
@@ -27,6 +28,7 @@ Runtime dependencies:
 
 - NumPy
 - Pillow
+- Rich
 
 ## Usage
 

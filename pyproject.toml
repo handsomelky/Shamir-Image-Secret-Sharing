@@ -8,6 +8,7 @@ license = "GPL-3.0-only"
 dependencies = [
     "numpy",
     "pillow",
+    "rich>=15.0.0",
 ]
 
 [tool.uv]

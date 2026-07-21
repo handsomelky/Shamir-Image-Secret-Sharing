@@ -1,4 +1,5 @@
 import argparse
+from dataclasses import dataclass
 import math
 import os
 import secrets
@@ -10,6 +11,11 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.table import Table
+from rich.text import Text
 
 
 FIELD_SIZE = 256
@@ -19,6 +25,30 @@ PAYLOAD_HEADER_FORMAT = ">8sBQQ"
 PAYLOAD_HEADER_SIZE = struct.calcsize(PAYLOAD_HEADER_FORMAT)
 PAYLOAD_FLAG_ZLIB = 1
 SHARE_IMAGE_WIDTH = 1024
+CONSOLE = Console()
+ERROR_CONSOLE = Console(stderr=True)
+
+
+@dataclass(frozen=True)
+class FileResult:
+    path: Path
+    size: str
+
+
+@dataclass(frozen=True)
+class EncodeResult:
+    input_path: Path
+    payload_size: int
+    original_size: int
+    stored_size: int
+    compressed: bool
+    shares: list[FileResult]
+
+
+@dataclass(frozen=True)
+class DecodeResult:
+    path: Path
+    size: str
 
 
 def gf_mul_byte(left, right):
@@ -102,6 +132,18 @@ def build_payload(image_path):
 
     header = struct.pack(PAYLOAD_HEADER_FORMAT, PAYLOAD_MAGIC, flags, len(image_bytes), len(stored))
     return header + stored
+
+
+def read_payload_header(payload):
+    if len(payload) < PAYLOAD_HEADER_SIZE:
+        raise ValueError("Payload is too small")
+    magic, flags, original_size, stored_size = struct.unpack(
+        PAYLOAD_HEADER_FORMAT,
+        payload[:PAYLOAD_HEADER_SIZE],
+    )
+    if magic != PAYLOAD_MAGIC:
+        raise ValueError("Invalid payload header")
+    return flags, original_size, stored_size
 
 
 def parse_payload(payload):
@@ -189,6 +231,37 @@ def get_file_size(file_path):
         return f"Error: {exc}"
 
 
+def build_progress(console):
+    return Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("{task.completed}/{task.total}"),
+        TimeElapsedColumn(),
+        console=console,
+        transient=not console.is_terminal,
+    )
+
+
+def render_file_results(title, rows, console):
+    table = Table(title=title)
+    table.add_column("#", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Path", style="green", overflow="fold")
+    table.add_column("Size", justify="right", style="magenta")
+    for index, result in enumerate(rows, start=1):
+        table.add_row(str(index), Text(str(result.path)), result.size)
+    console.print(table)
+
+
+def render_kv_table(title, values, console):
+    table = Table(title=title)
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+    for key, value in values:
+        table.add_row(str(key), Text(str(value)))
+    console.print(table)
+
+
 def validate_share_parameters(n, r):
     if r is None:
         raise ValueError("Threshold number 'r' is required")
@@ -249,10 +322,12 @@ def compare_images(image1_path, image2_path):
         raise ValueError(f"Image shapes differ: {image1.shape} != {image2.shape}")
 
     diff = np.abs(image1 - image2)
-    print("Mean difference:", round(float(np.mean(diff)), 4))
-    print("Max difference:", round(float(np.max(diff)), 4))
-    print("Min difference:", round(float(np.min(diff)), 4))
-    print("Standard deviation of difference:", round(float(np.std(diff)), 4))
+    return {
+        "Mean difference": round(float(np.mean(diff)), 4),
+        "Max difference": round(float(np.max(diff)), 4),
+        "Min difference": round(float(np.min(diff)), 4),
+        "Standard deviation": round(float(np.std(diff)), 4),
+    }
 
 
 def build_parser():
@@ -269,39 +344,98 @@ def build_parser():
     return parser
 
 
-def encode_image(args):
+def encode_image(args, console=CONSOLE):
     validate_share_parameters(args.n, args.r)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     payload = build_payload(args.encode)
+    flags, original_size, stored_size = read_payload_header(payload)
+    compressed = bool(flags & PAYLOAD_FLAG_ZLIB)
+    console.print(
+        Panel.fit(
+            Text(
+                "\n".join(
+                    [
+                        f"Input: {args.encode}",
+                        f"Shares: {args.n}",
+                        f"Threshold: {args.r}",
+                        f"Payload: {format_size(len(payload))}",
+                        f"Compression: {'zlib' if compressed else 'none'}",
+                    ]
+                )
+            ),
+            title="Encoding",
+            border_style="cyan",
+        )
+    )
+
+    saved_shares = []
     shares = iter_polynomial_shares(np.frombuffer(payload, dtype=np.uint8), n=args.n, r=args.r)
-    for i, share_bytes in enumerate(shares, start=1):
-        secret_img_path = output_dir / f"{args.share_prefix}_{i}.png"
-        save_share_image(secret_img_path, share_bytes)
-        print(f"{secret_img_path} saved.", get_file_size(secret_img_path))
+    with build_progress(console) as progress:
+        task = progress.add_task("Generating share PNGs", total=args.n)
+        for i, share_bytes in enumerate(shares, start=1):
+            secret_img_path = output_dir / f"{args.share_prefix}_{i}.png"
+            save_share_image(secret_img_path, share_bytes)
+            saved_shares.append(FileResult(secret_img_path, get_file_size(secret_img_path)))
+            progress.advance(task)
+
+    render_file_results("Generated Shares", saved_shares, console)
+    return EncodeResult(
+        input_path=Path(args.encode),
+        payload_size=len(payload),
+        original_size=original_size,
+        stored_size=stored_size,
+        compressed=compressed,
+        shares=saved_shares,
+    )
 
 
-def decode_image(args):
+def decode_image(args, console=CONSOLE):
     if args.r is None:
         raise ValueError("Threshold number 'r' is required")
     validate_indices(args.index, args.r)
+
+    console.print(
+        Panel.fit(
+            Text(
+                "\n".join(
+                    [
+                        f"Output: {args.decode}",
+                        f"Threshold: {args.r}",
+                        f"Indexes: {', '.join(str(index) for index in args.index)}",
+                    ]
+                )
+            ),
+            title="Decoding",
+            border_style="cyan",
+        )
+    )
 
     share_dir = Path(args.share_dir)
     input_shares = []
     share_size = None
 
-    for index in args.index:
-        secret_img_path = share_dir / f"{args.share_prefix}_{index}.png"
-        share_bytes = share_image_to_bytes(secret_img_path)
-        if share_size is not None and share_bytes.shape[0] != share_size:
-            raise ValueError("All shares must have the same encoded byte length")
-        share_size = share_bytes.shape[0]
-        input_shares.append(share_bytes)
+    with build_progress(console) as progress:
+        task = progress.add_task("Reading share PNGs", total=len(args.index))
+        for index in args.index:
+            secret_img_path = share_dir / f"{args.share_prefix}_{index}.png"
+            share_bytes = share_image_to_bytes(secret_img_path)
+            if share_size is not None and share_bytes.shape[0] != share_size:
+                raise ValueError("All shares must have the same encoded byte length")
+            share_size = share_bytes.shape[0]
+            input_shares.append(share_bytes)
+            progress.advance(task)
 
-    payload = decode(np.array(input_shares, dtype=np.uint8), args.index, r=args.r)
-    Path(args.decode).write_bytes(parse_payload(payload.tobytes()))
-    print(f"{args.decode} saved.", get_file_size(args.decode))
+    with console.status("Reconstructing payload...", spinner="dots"):
+        payload = decode(np.array(input_shares, dtype=np.uint8), args.index, r=args.r)
+
+    with console.status("Writing recovered image...", spinner="dots"):
+        Path(args.decode).write_bytes(parse_payload(payload.tobytes()))
+
+    result = DecodeResult(Path(args.decode), get_file_size(args.decode))
+    render_file_results("Recovered Image", [result], console)
+    return result
 
 
 def main():
@@ -315,22 +449,23 @@ def main():
     try:
         if args.encode:
             start_time = time.time()
-            print("\n=== Starting image encoding process ===")
+            CONSOLE.rule("[bold cyan]Image Encoding")
             encode_image(args)
-            print("=== Image encoding completed. Time elapsed: {:.2f} seconds ===".format(time.time() - start_time))
+            CONSOLE.print(f"[bold green]Encoding completed[/bold green] in {time.time() - start_time:.2f}s")
 
         if args.decode:
             start_time = time.time()
-            print("\n=== Starting image decoding process ===")
+            CONSOLE.rule("[bold cyan]Image Decoding")
             decode_image(args)
-            print("=== Image decoding completed. Time elapsed: {:.2f} seconds ===".format(time.time() - start_time))
+            CONSOLE.print(f"[bold green]Decoding completed[/bold green] in {time.time() - start_time:.2f}s")
 
         if args.compare:
-            print("\n=== Starting image comparison ===")
-            compare_images(args.compare[0], args.compare[1])
-            print("=== Image comparison completed. ===")
+            CONSOLE.rule("[bold cyan]Image Comparison")
+            stats = compare_images(args.compare[0], args.compare[1])
+            render_kv_table("Pixel Difference", stats.items(), CONSOLE)
+            CONSOLE.print("[bold green]Comparison completed[/bold green]")
     except (OSError, ValueError) as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        ERROR_CONSOLE.print(Panel(Text(str(exc), style="bold red"), title="Error", border_style="red"))
         sys.exit(1)
 
 

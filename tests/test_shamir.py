@@ -1,9 +1,11 @@
+import io
 import tempfile
 import unittest
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
+from rich.console import Console
 
 import Shamir
 
@@ -31,7 +33,7 @@ class ShamirTests(unittest.TestCase):
                 output_dir=str(tmp_path),
                 share_dir=str(tmp_path),
             )
-            Shamir.encode_image(encode_args)
+            Shamir.encode_image(encode_args, console=quiet_console())
 
             decode_args = argparse_args(
                 decode=str(recovered),
@@ -40,7 +42,7 @@ class ShamirTests(unittest.TestCase):
                 output_dir=str(tmp_path),
                 share_dir=str(tmp_path),
             )
-            Shamir.decode_image(decode_args)
+            Shamir.decode_image(decode_args, console=quiet_console())
 
             recovered_image = np.array(Image.open(recovered), dtype=np.uint8)
             self.assertTrue(np.array_equal(image, recovered_image))
@@ -89,7 +91,10 @@ class ShamirTests(unittest.TestCase):
             source = tmp_path / "source.png"
             Image.fromarray(image).save(source)
 
-            Shamir.encode_image(argparse_args(encode=str(source), n=3, r=2, output_dir=str(tmp_path)))
+            Shamir.encode_image(
+                argparse_args(encode=str(source), n=3, r=2, output_dir=str(tmp_path)),
+                console=quiet_console(),
+            )
 
             with Image.open(tmp_path / "secret_1.png") as share:
                 self.assertEqual("L", share.mode)
@@ -110,6 +115,19 @@ class ShamirTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "shapes differ"):
                 Shamir.compare_images(first, second)
 
+    def test_compare_images_returns_difference_stats(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            first = tmp_path / "first.png"
+            second = tmp_path / "second.png"
+            Image.fromarray(np.zeros((2, 2), dtype=np.uint8)).save(first)
+            Image.fromarray(np.ones((2, 2), dtype=np.uint8)).save(second)
+
+            stats = Shamir.compare_images(first, second)
+
+            self.assertEqual(1.0, stats["Mean difference"])
+            self.assertEqual(1.0, stats["Max difference"])
+
 
 def argparse_args(**overrides):
     defaults = {
@@ -125,6 +143,10 @@ def argparse_args(**overrides):
     }
     defaults.update(overrides)
     return type("Args", (), defaults)()
+
+
+def quiet_console():
+    return Console(file=io.StringIO(), force_terminal=False, width=120)
 
 
 if __name__ == "__main__":
