@@ -1,0 +1,7 @@
+__pycache__/
+*.py[cod]
+.*
+uv.lock
+htmlcov/
+secret_*.png
+avatar_recover.png

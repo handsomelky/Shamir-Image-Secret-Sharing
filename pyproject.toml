@@ -1,0 +1,14 @@
+[project]
+name = "shamir-image-secret-sharing"
+version = "1.0.0"
+description = "Lossless image secret sharing based on Shamir's Secret Sharing."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "GPL-3.0-only"
+dependencies = [
+    "numpy",
+    "pillow",
+]
+
+[tool.uv]
+package = false
